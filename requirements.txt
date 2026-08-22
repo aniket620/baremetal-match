@@ -1,0 +1,12 @@
+# Job Search AI Agent System - Dependencies
+# Python 3.10+ required
+
+# CrewAI Framework - Multi-agent orchestration
+# Provides the LLM layer (via LiteLLM) used to reach the Claude API
+crewai==0.203.1
+
+# HTTP Requests - For Adzuna API calls
+requests==2.32.5
+
+# Environment Variables - Secure API key management
+python-dotenv==1.1.1
