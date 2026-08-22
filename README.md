@@ -105,4 +105,4 @@ Built on the multi-agent architecture from "Job Search AI Agent System," created
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+xxxxxxxxx
