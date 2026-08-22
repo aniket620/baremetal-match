@@ -1,519 +1,108 @@
 # ⚙️ BareMetal Match
 
-> **Find embedded/firmware roles, close your RTOS/CAN/SPI/I2C skill gaps, ace the interview, and track every application — all in one CrewAI + Claude powered tool.**
->
-> Originally built as "Job Search AI Agent System" for UC Irvine Claude Builder Club's "Intro to AI Agents" workshop (October 20, 2025); customized by Aniket Londhe for embedded/firmware roles.
+AI-assisted job hunting for embedded and firmware engineers. Four Claude-powered agents pull real listings, map them against a skills roadmap, write interview prep, and give you resume/LinkedIn strategy — and a separate tracker logs what you actually apply to, so you can see your pipeline at a glance.
 
-Stop manually searching for embedded engineering jobs, analyzing requirements, and preparing for interviews. Let AI agents do the heavy lifting while you focus on landing your dream role.
+## Why this exists
 
-This system uses **4 specialized AI agents** that collaborate to give you:
-- 🔍 **Current job listings** from real APIs (Adzuna)
-- 📚 **Personalized skills roadmap** - what to learn and how, tailored to C/C++/Python, SPI, I2C, RTOS, CAN, and J1939
-- 🎤 **Interview prep materials** - questions + strategies, including protocol/design-tradeoff drills on your target skills
-- 💼 **Career advice** - resume, LinkedIn, and application tips
-- 📊 **Application tracker** - log every application, and see your pipeline stats (see below)
+Generic job-search tools don't know the difference between an RTOS scheduler question and a REST API question. BareMetal Match is tuned for embedded work from the ground up — it evaluates listings and builds prep material against a target skill set (default: C, C++, Python, SPI, I2C, RTOS, CAN, J1939), so the output is actually useful for a firmware/embedded search instead of generic advice with the job title swapped in.
 
-**All in one automated report. All tailored to your specific job search.**
+## Two tools, one project
 
----
+**`main.py`** — the AI pipeline. Four agents run in sequence: a job searcher (Adzuna API), a skills advisor, an interview coach, and a career strategist. Each builds on the last agent's output. Takes a few minutes, produces a full markdown report.
 
-## 🎯 What Makes This Cool?
+**`track.py`** — a lightweight CLI for your own application log. No AI calls, runs instantly. Records every job you apply to with a status (`applied` → `interviewing`/`rejected`/`offer`/`ghosted`/`withdrawn`) and gives you stats: response rate, offer rate, recent activity, top companies.
 
-1. **Real multi-agent collaboration** - Agents pass context to each other, building on previous work
-2. **Powered by Claude (Anthropic)** - State-of-the-art AI with excellent reasoning
-3. **Live job data** - Integrates with Adzuna API for real, current job listings
-4. **Production-ready code** - Error handling, retries, logging, tests
-5. **Actually useful** - Generate a report you can use for your real job search
+They're independent — `main.py` finds and prepares you for jobs, `track.py` records what happened when you actually applied.
 
-### Example Output
+## Setup
 
-After running `uv run main.py`, you get a comprehensive report with:
-
-```
-✅ 5 Embedded Software Engineer jobs in Los Angeles
-📊 Analysis of required skills (C, C++, RTOS, CAN, J1939...) across all listings
-📚 Learning roadmap: "Start with RTOS fundamentals (2-3 weeks), then..."
-🎤 10 interview questions per role, including protocol-level RTOS/CAN drills
-💼 Resume keywords to add, LinkedIn optimization tips, networking strategies
-📊 uv run track.py stats → your real application pipeline and response rate
-```
-
-See [examples/example_output.txt](examples/example_output.txt) for a full sample report.
-
----
-
-## 🚀 Quick Start (5 Minutes)
-
-### Prerequisites
-
-- **Python 3.10+** ([Download](https://www.python.org/downloads/))
-- **uv package manager** ([Install](https://docs.astral.sh/uv/getting-started/installation/))
-- **Anthropic API key** ([Get one](https://console.anthropic.com/))
-- **Adzuna API credentials** ([Sign up - free](https://developer.adzuna.com/))
-
-### Installation
+Requires Python 3.10+, [uv](https://docs.astral.sh/uv/getting-started/installation/), an [Anthropic API key](https://console.anthropic.com/), and free [Adzuna API credentials](https://developer.adzuna.com/).
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/byrencheema/job-search-agent.git
-cd job-search-agent
-
-# 2. Install dependencies with uv
+git clone https://github.com/aniket620/baremetal-match.git
+cd baremetal-match
 uv sync
-
-# 3. Set up environment variables
-cp .env.example .env
-# Edit .env and add your API keys
-
-# 4. Run the system!
-uv run main.py
+cp .env.example .env   # then fill in your three API keys
 ```
 
-That's it! The system will:
-1. Search for jobs (default: "Embedded Software Engineer" in "Los Angeles")
-2. Analyze required skills against your target list (C, C++, Python, SPI, I2C, RTOS, CAN, J1939)
-3. Generate interview prep materials
-4. Provide career strategy advice
-5. Save everything to `outputs/job_search_report_[timestamp].txt`
-
-Then track what you actually apply to with `uv run track.py add ...` and check your stats anytime with `uv run track.py stats`.
-
----
-
-## 📋 Detailed Setup
-
-### Step 1: Get API Keys
-
-#### Anthropic Claude API
-
-1. Go to [console.anthropic.com](https://console.anthropic.com/)
-2. Sign up for an account
-3. Navigate to "API Keys"
-4. Create a new API key
-5. Copy the key (starts with `sk-ant-...`)
-6. **Note:** You may need to add credits ($5 minimum). First-time users often get free credits.
-
-#### Adzuna Job Search API
-
-1. Go to [developer.adzuna.com](https://developer.adzuna.com/)
-2. Click "Register for API access"
-3. Fill out the form (it's free!)
-4. You'll receive:
-   - App ID (a number)
-   - API Key (a long string)
-5. **Free tier:** 250 API calls/month (more than enough for this workshop)
-
-### Step 2: Configure Environment
-
-```bash
-# Copy the example environment file
-cp .env.example .env
-```
-
-Edit `.env` in your text editor:
-
-```bash
-# Add your actual keys here
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-ADZUNA_APP_ID=12345
-ADZUNA_API_KEY=your-adzuna-key-here
-```
-
-**Important:** Never commit `.env` to Git! It's already in `.gitignore` for safety.
-
-### Step 3: Install Dependencies
-
-Using uv (recommended):
-```bash
-uv sync
-```
-
-Or using traditional pip:
-```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
-pip install -r requirements.txt
-```
-
-### Step 4: Verify Setup
-
-Test that everything is configured correctly:
+Verify everything's wired up:
 
 ```bash
 uv run python -c "from src.config import validate_config, print_config; print_config(); print(validate_config())"
 ```
 
-You should see your configuration printed with ✓ marks for all API keys.
-
----
-
-## 🎮 Usage
-
-### Basic Usage
-
-Run with default settings (Embedded Software Engineer in Los Angeles, targeting C, C++, Python, SPI, I2C, RTOS, CAN, and J1939):
+## Running a search
 
 ```bash
 uv run main.py
 ```
 
-### Customize Your Search
-
-Edit `main.py` to change search parameters:
+Default search is "Embedded Software Engineer" in Los Angeles. To change the role, location, or target skills, edit the top of `main.py`:
 
 ```python
-# At the top of main.py, change these:
-JOB_ROLE = "Firmware Engineer"           # Your desired role
-LOCATION = "San Francisco"               # Your target location
-NUM_RESULTS = 10                         # How many jobs to analyze
-TARGET_SKILLS = "C, C++, Rust, SPI, I2C, RTOS"  # Skills to evaluate against
+JOB_ROLE = "Firmware Engineer"
+LOCATION = "Austin, TX"
+NUM_RESULTS = 10
+TARGET_SKILLS = "C, C++, Rust, SPI, I2C, RTOS, Zephyr"
 ```
 
-Then run:
-```bash
-uv run main.py
-```
+`TARGET_SKILLS` doesn't get sent to the Adzuna search itself (a long exact-match keyword list would return nothing) — it's fed to the skills/interview/career agents so they explicitly evaluate every listing against those skills, even ones the postings don't mention outright.
 
-### What You'll See
+Output lands in `outputs/`: a combined `job_search_report_[timestamp].md`, plus each agent's individual output for reference.
 
-The system runs for 3-5 minutes, showing:
-1. ✅ Configuration validation
-2. 🤖 Agent creation
-3. 📋 Task setup
-4. 🚀 Execution with detailed agent outputs
-5. 💾 Final report saved
-
-### Output Files
-
-All outputs saved to `outputs/` folder:
-- `job_search_report_[timestamp].txt` - **Full combined report**
-- `job_search_[timestamp].txt` - Job listings only
-- `skills_analysis_[timestamp].txt` - Skills roadmap only
-- `interview_prep_[timestamp].txt` - Interview questions only
-- `career_advisory_[timestamp].txt` - Career advice only
-
----
-
-## 📊 Application Tracker
-
-`main.py` finds and prepares you for jobs; `track.py` is a separate, lightweight CLI for logging what you actually did about them — a personal log of every application with status tracking and pipeline stats. It's independent of the AI agents (no API calls, instant), and your data is stored locally in `data/applications.json`, which is gitignored so it never gets committed.
-
-### Log an application
+## Tracking applications
 
 ```bash
+# Log one
 uv run track.py add --title "Embedded Software Engineer" --company "Anduril" \
     --location "Costa Mesa, CA" --url "https://..." --notes "Referred by Jane"
-```
 
-Statuses are: `applied` (default), `interviewing`, `offer`, `rejected`, `ghosted`, `withdrawn`.
-
-### Update a status
-
-Use the id printed by `add`/`list`:
-
-```bash
+# Move it forward when something happens (use the id printed above)
 uv run track.py update a1b2c3d4 --status interviewing
-```
 
-### List applications
-
-```bash
+# See everything, or filter
 uv run track.py list
-uv run track.py list --status interviewing   # filter by status
-```
+uv run track.py list --status interviewing
 
-### See your stats
-
-```bash
+# Check your numbers
 uv run track.py stats
 ```
 
-This prints your total applications, response rate (% that got any reply — interview, offer, or rejection), offer rate, applications in the last 7/30 days, a pipeline breakdown bar chart, and your top companies applied to.
+`stats` gives you total applications, response rate (% that got any reply — interview, offer, or rejection), offer rate, activity in the last 7/30 days, a pipeline bar chart by status, and your top companies applied to. Data lives in `data/applications.json`, gitignored — it's your history, not project code.
 
----
-
-## 🛠️ Customization
-
-### Change Job Search Parameters
-
-**Option 1:** Edit `main.py` directly
-
-```python
-JOB_ROLE = "Product Manager"
-LOCATION = "Remote"
-NUM_RESULTS = 15
-```
-
-**Option 2:** Edit `src/config.py` to change defaults
-
-```python
-DEFAULT_JOB_ROLE = "Software Engineer"
-DEFAULT_LOCATION = "New York"
-DEFAULT_NUM_RESULTS = 10
-```
-
-### Modify Agent Behavior
-
-Want agents to focus on different things? Edit agent backstories in `src/agents.py`:
-
-```python
-# Example: Make Skills Advisor focus on online courses
-backstory=(
-    'You are a learning specialist who specializes in online education '
-    'platforms like Coursera, Udemy, and DataCamp. You always recommend '
-    'specific courses with links...'
-)
-```
-
-### Add New Agents
-
-Want a 5th agent (e.g., Salary Negotiation Coach)? See [docs/CUSTOMIZATION.md](docs/CUSTOMIZATION.md) for a step-by-step guide.
-
-### Change LLM Model
-
-Using a different Claude model:
-
-```python
-# src/config.py
-CLAUDE_MODEL = "claude-opus-4-20250514"  # More powerful but slower
-# or
-CLAUDE_MODEL = "claude-haiku-4-5-20250815"  # Faster and cheaper
-```
-
----
-
-## 📁 Project Structure
+## Project layout
 
 ```
 baremetal-match/
-├── README.md                 # You are here!
-├── pyproject.toml           # uv project configuration
-├── requirements.txt         # Python dependencies
-├── .env.example            # Environment variables template
-├── .gitignore              # Git ignore rules
-│
-├── main.py                 # 🚀 AI job search - RUN THIS!
-├── track.py                 # 📊 Application tracker CLI
-│
-├── src/                    # Source code
-│   ├── __init__.py
-│   ├── config.py          # Configuration and settings
-│   ├── agents.py          # 4 AI agent definitions
-│   ├── tasks.py           # 4 task definitions
-│   ├── tools.py           # Adzuna API integration
-│   └── tracker.py         # Application tracker logic
-│
-├── tests/                  # Test files
-│   ├── __init__.py
-│   ├── test_tools.py      # Unit tests for tools
-│   └── test_tracker.py    # Unit tests for the tracker
-│
-├── outputs/                # Generated reports go here
-│   └── .gitkeep
-│
-├── data/                   # Your personal application data (gitignored)
-│   └── .gitkeep
-│
-├── examples/               # Example files
-│   └── example_output.txt # Sample report
-│
-└── docs/                   # Documentation
-    ├── BEST_PRACTICES.md  # Design patterns used
-    ├── SETUP.md           # Detailed setup guide
-    ├── CUSTOMIZATION.md   # How to customize
-    └── TROUBLESHOOTING.md # Common issues + fixes
+├── main.py              AI job search pipeline
+├── track.py             Application tracker CLI
+├── src/
+│   ├── config.py        Settings, API keys, paths
+│   ├── agents.py        The 4 CrewAI agents
+│   ├── tasks.py         Task descriptions for each agent
+│   ├── tools.py         Adzuna API integration
+│   └── tracker.py       Application tracker logic
+├── tests/                Unit tests (pytest)
+├── data/                 Your application history (gitignored)
+├── outputs/              Generated reports
+└── docs/                 Deeper setup/customization/troubleshooting notes
 ```
 
----
-
-## 🧪 Running Tests
-
-Verify your setup with tests:
+## Testing
 
 ```bash
-# Run all tests
-uv run pytest
-
-# Run tests with verbose output
-uv run pytest -v
-
-# Run only tool tests
-uv run pytest tests/test_tools.py
-
-# Run with coverage report
-uv run pytest --cov=src
+uv sync --extra dev
+uv run --extra dev pytest -q
 ```
 
----
+## Customizing further
 
-## 🐛 Troubleshooting
+Agent personalities and focus areas live in `src/agents.py` (backstories) and `src/tasks.py` (task instructions) — both are plain text you can edit directly. Swap the Claude model in `src/config.py` (`CLAUDE_MODEL`). See `docs/CUSTOMIZATION.md` for a walkthrough of adding a new agent entirely.
 
-### "Configuration Error: ANTHROPIC_API_KEY is not set"
+## Credits
 
-**Solution:** Make sure you've created `.env` file (copy from `.env.example`) and added your API key.
+Built on the multi-agent architecture from "Job Search AI Agent System," created for UC Irvine Claude Builder Club's Intro to AI Agents workshop (October 2025). Reworked into BareMetal Match — embedded-focused search, target-skills evaluation, and the application tracker — by Aniket Londhe.
 
-### "HTTP Error 401" from Adzuna API
+## License
 
-**Solution:** Check that your Adzuna credentials are correct in `.env`. The App ID should be just numbers, the API key is a long string.
-
-### "Module not found" errors
-
-**Solution:** Make sure you've installed dependencies:
-```bash
-uv sync
-```
-
-### Agents are taking too long / timing out
-
-**Solution:**
-1. Reduce `NUM_RESULTS` to 3-5 jobs
-2. Check your internet connection
-3. Adzuna API might be slow - wait and retry
-
-### "Rate limit exceeded" from Anthropic
-
-**Solution:** You've hit the API rate limit. Wait a few minutes or upgrade your Anthropic plan.
-
-For more issues, see [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)
-
----
-
-## 📚 How It Works
-
-### Architecture Overview
-
-```
-┌─────────────┐
-│   main.py   │  Entry point, orchestrates everything
-└──────┬──────┘
-       │
-       ├─> Creates Agents (from agents.py)
-       │   ├── Job Searcher (uses Adzuna API tool)
-       │   ├── Skills Advisor (analyzes jobs)
-       │   ├── Interview Coach (generates questions)
-       │   └── Career Advisor (strategic advice)
-       │
-       ├─> Creates Tasks (from tasks.py)
-       │   ├── Job Search Task → Skills Task
-       │   ├── Skills Task   → Interview Task
-       │   └── Interview Task → Career Task
-       │
-       └─> Creates Crew (CrewAI)
-           └─> Sequential execution
-               └─> Each agent completes their task
-                   └─> Results saved & passed to next
-```
-
-### Agent Flow
-
-1. **Job Searcher Agent** calls Adzuna API → finds 5 jobs in Los Angeles
-2. **Skills Advisor Agent** receives job listings → analyzes required skills → creates learning roadmap
-3. **Interview Coach Agent** receives job listings → generates 8-10 questions per role → provides STAR method guidance
-4. **Career Advisor Agent** receives job listings → gives resume tips, LinkedIn optimization, networking strategies
-
-All agents use **Claude (Anthropic)** as their LLM brain.
-
-### Key Technologies
-
-- **CrewAI** - Multi-agent orchestration framework
-- **LangChain** - LLM framework integration layer
-- **Anthropic Claude** - Latest Sonnet 4.5 model for reasoning
-- **Adzuna API** - Real job search data
-- **Python 3.10+** - Modern Python with type hints
-
----
-
-## 🎓 Learning Resources
-
-### Understand the Code
-
-1. **Start with:** [docs/BEST_PRACTICES.md](docs/BEST_PRACTICES.md) - Learn the design patterns used
-2. **Read the code:** Start with `main.py`, then `agents.py`, then `tasks.py`
-3. **Experiment:** Change one thing, run it, see what happens
-
-### Learn More About AI Agents
-
-- **CrewAI Docs:** https://docs.crewai.com/
-- **Anthropic Prompt Engineering:** https://docs.anthropic.com/prompt-engineering
-- **DeepLearning.AI Course:** [Multi-Agent Systems with CrewAI](https://www.deeplearning.ai/short-courses/multi-ai-agent-systems-with-crewai/)
-
-### Learn More About the APIs
-
-- **Adzuna API Docs:** https://developer.adzuna.com/
-- **Anthropic API Reference:** https://docs.anthropic.com/claude/reference
-
----
-
-## 🤝 Contributing
-
-Want to improve this project? Contributions welcome!
-
-### Ideas for Enhancements
-
-- [ ] Add more job boards (Indeed, LinkedIn, Glassdoor)
-- [ ] Salary analysis agent
-- [ ] Company culture research agent
-- [ ] Resume parser tool (upload your resume, get personalized advice)
-- [ ] Email cover letter generator
-- [ ] Job application tracker
-- [ ] Interview scheduling assistant
-- [ ] Web UI with Streamlit or Gradio
-
-### How to Contribute
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Add tests if applicable
-5. Update documentation
-6. Submit a pull request
-
----
-
-## 📄 License
-
-MIT License - Feel free to use this for learning, projects, or your actual job search!
-
----
-
-## 🙏 Acknowledgments
-
-- **UC Irvine Claude Builder Club** - For organizing the workshop
-- **Anthropic** - For Claude and excellent documentation
-- **CrewAI** - For making multi-agent systems accessible
-- **Adzuna** - For providing free job search API access
-- **All workshop participants** - For being awesome!
-
----
-
-## 📞 Support
-
-- **Issues:** [GitHub Issues](https://github.com/byrencheema/job-search-agent/issues)
-- **Discussions:** [GitHub Discussions](https://github.com/byrencheema/job-search-agent/discussions)
-- **Workshop Discord:** [Join here]
-- **Office Hours:** Fridays 2-4 PM at UCI
-
----
-
-## 🎉 Next Steps
-
-After completing the workshop:
-
-1. ✅ Run the system with your own job search criteria
-2. ✅ Read the generated report and use it for your real job search
-3. ✅ Customize one agent to better match your needs
-4. ✅ Add a new feature (maybe a 5th agent?)
-5. ✅ Share your improvements with the community!
-6. ✅ Land your dream job! 🚀
-
----
-
-**Built with ❤️ for UC Irvine Claude Builder Club**
-
-*Happy job hunting! May your agents find you the perfect role.* 🎯
-
----
-
-**Workshop Date:** October 20, 2025
-**Version:** 1.0.0
-**Last Updated:** October 19, 2025
+MIT — see [LICENSE](LICENSE).
